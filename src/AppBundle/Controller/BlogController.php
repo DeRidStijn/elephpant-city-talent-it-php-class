@@ -57,6 +57,22 @@ class BlogController extends Controller
     }
 
     /**
+     * @Route("/tags/{tagSlug}", name="filter_tags")
+     * @Method("GET")
+     * @Security("is_granted('IS_AUTHENTICATED_FULLY')")
+     * @ParamConverter("post", options={"mapping": {"tagSlug": "slug"}})
+     *
+     * NOTE: The ParamConverter mapping is required because the route parameter
+     * (postSlug) doesn't match any of the Doctrine entity properties (slug).
+     * See http://symfony.com/doc/current/bundles/SensioFrameworkExtraBundle/annotations/converters.html#doctrine-converter
+     */
+    public function filterTagsAction($tagSlug)
+    {
+        $posts = $this->getDoctrine()->getRepository(Post::class)->findBy(['tag.name' => $tagSlug]);
+        return $this->render('filter/tags.'.$_format.'.twig', ['slug' => $tagpost->getSlug()], ['posts' => $posts] );
+    }
+
+    /**
      * @Route("/posts/{slug}", name="blog_post")
      * @Method("GET")
      *
@@ -79,7 +95,7 @@ class BlogController extends Controller
 
         return $this->render('blog/post_show.html.twig', ['post' => $post]);
     }
-
+    
     /**
      * @Route("/comment/{postSlug}/new", name="comment_new")
      * @Method("POST")
