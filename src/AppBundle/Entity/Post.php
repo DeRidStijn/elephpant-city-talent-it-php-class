@@ -232,4 +232,9 @@ class Post
     {
         return $this->tags;
     }
+
+    public function hasTag(Tag $tag, $tagId)
+    {
+        
+    }
 }

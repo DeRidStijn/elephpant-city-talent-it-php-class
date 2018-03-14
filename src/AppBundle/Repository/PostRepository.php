@@ -12,6 +12,7 @@
 namespace AppBundle\Repository;
 
 use AppBundle\Entity\Post;
+use AppBundle\Entity\Tag;
 use Doctrine\ORM\EntityRepository;
 use Doctrine\ORM\Query;
 use Pagerfanta\Adapter\DoctrineORMAdapter;
@@ -57,4 +58,5 @@ class PostRepository extends EntityRepository
 
         return $paginator;
     }
+   
 }

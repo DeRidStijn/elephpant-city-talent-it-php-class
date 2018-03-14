@@ -13,6 +13,7 @@ namespace AppBundle\Controller;
 
 use AppBundle\Entity\Comment;
 use AppBundle\Entity\Post;
+use AppBundle\Entity\Tag;
 use AppBundle\Events;
 use AppBundle\Form\CommentType;
 use Sensio\Bundle\FrameworkExtraBundle\Configuration\Cache;
@@ -24,7 +25,7 @@ use Symfony\Bundle\FrameworkBundle\Controller\Controller;
 use Symfony\Component\EventDispatcher\GenericEvent;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
-
+use Doctrine\ORM\Query\ResultSetMapping;
 /**
  * Controller used to manage blog contents in the public part of the site.
  *
@@ -37,19 +38,54 @@ class BlogController extends Controller
 {
     /**
      * @Route("/", defaults={"page": "1", "_format"="html"}, name="blog_index")
+     * @Route("/tag/{tagSlug}", defaults={"tagSlug": "0", "page": "1", "_format"="html"}, name="blog_index_tag")
      * @Route("/rss.xml", defaults={"page": "1", "_format"="xml"}, name="blog_rss")
      * @Route("/page/{page}", defaults={"_format"="html"}, requirements={"page": "[1-9]\d*"}, name="blog_index_paginated")
      * @Method("GET")
      * @Cache(smaxage="10")
+     * @ParamConverter("post", options={"mapping": {"tagSlug": "slug"}})
      *
      * NOTE: For standard formats, Symfony will also automatically choose the best
      * Content-Type header for the response.
      * See http://symfony.com/doc/current/quick_tour/the_controller.html#using-formats
      */
-    public function indexAction($page, $_format)
+    public function indexAction($page, $_format, $tagSlug=0)
     {
         $posts = $this->getDoctrine()->getRepository(Post::class)->findLatest($page);
+        if ($tagSlug != 0)
+        {
+            $rsm = new ResultSetMapping();
+            $em = $this->getDoctrine()->getEntityManager();
+            $connection = $em->getConnection();
+            $rsm->addScalarResult('id', 'id');
+            $rsm->addScalarResult('author_id', 'author_id');
+            $rsm->addScalarResult('title', 'title');
+            $rsm->addScalarResult('slug', 'slug');
+            $rsm->addScalarResult('summary', 'summary');
+            $rsm->addScalarResult('content', 'content');
+            $rsm->addScalarResult('publishedAt', 'publishedAt');
+           // $rsm->addEntityResult('Post', 'p');
+            $statement = $em->createNativeQuery('SELECT p.* 
+            FROM symfony_demo_post p LEFT JOIN symfony_demo_post_tag pt ON p.id = pt.post_id
+            WHERE pt.tag_id = ?', $rsm);
+            $statement->setParameter(1, $tagSlug);
+            $posts = $statement->getResult();
+            // $searchTag = $this->getDoctrine()->getRepository(Tag::class)->find($tagSlug);
+            // var_dump($searchTag);
 
+            // $filteredPosts = $this->getDoctrine()->getRepository(Post::class)->find();
+            /*$posts = [];
+            foreach ($results as $row)
+            {
+                $posts[] = $row;
+            }*/
+
+            return $this->render('blog/tagresults.'.$_format.'.twig', ['posts' => $posts]);
+
+        } else {
+            return $this->render('blog/index.'.$_format.'.twig', ['posts' => $posts]);
+        }
+        echo "de tagslug is" . $tagSlug;
         // Every template name also has two extensions that specify the format and
         // engine for that template.
         // See https://symfony.com/doc/current/templating.html#template-suffix
@@ -68,8 +104,21 @@ class BlogController extends Controller
      */
     public function filterTagsAction($tagSlug)
     {
-        $posts = $this->getDoctrine()->getRepository(Post::class)->findBy(['tag.name' => $tagSlug]);
-        return $this->render('filter/tags.'.$_format.'.twig', ['slug' => $tagpost->getSlug()], ['posts' => $posts] );
+        /*$em = $this->getDoctrine()->getManager();
+
+         $tag = $this->getDoctrine()->getRepository(Tag::class)->find($tagId);
+
+        $posts = $this->getDoctrine()->getRepository(Post::class)->findAll();
+
+        for($i = 0; $i < count($posts); $i++) {
+            if($i == $tagSlug) {
+                $postTag = $posts[$i]->getTags();
+            }
+        }
+        
+
+
+        return $this->render('blog/index.html.twig', ['posts' => $posts] );*/
     }
 
     /**
@@ -166,4 +215,5 @@ class BlogController extends Controller
             'form' => $form->createView(),
         ]);
     }
+
 }
